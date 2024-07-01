@@ -4,7 +4,8 @@
     "description": "Async HTTP client for JS environments.",
     "main": "index.js",
     "scripts": {
-        "test": "echo \"Error: no test specified\" && exit 1"
+        "test-JS": "node .\\unitTesting\\commonJS.js",
+        "test-ES": "node .\\unitTesting\\ES.ems.js"
     },
     "author": "ZKithcer",
     "repository": {

@@ -1,4 +1,4 @@
-class KwestGiver {
+export class KwestGiver {
     constructor(url) {
         this.apiURL = url;
         this.headerKeys = [];
@@ -425,4 +425,4 @@ class KwestGiver {
     }
 }
 
-module.exports = KwestGiver;
+export default KwestGiver;
