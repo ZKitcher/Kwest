@@ -1,6 +1,6 @@
 {
     "name": "kwest-giver",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "Async HTTP client for JS environments.",
     "main": "index.js",
     "scripts": {
