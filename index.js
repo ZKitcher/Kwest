@@ -24,6 +24,7 @@ export class KwestGiver {
         this.useQueue = true;
         this.queue = [];
         this.isProcessing = false;
+        this.showQueueType = false;
 
         this.localKey = null;
     }
@@ -40,22 +41,40 @@ export class KwestGiver {
         this.localKey = key;
     }
 
+    getCaptcha(key) {
+        return new Promise((resolve, reject) => {
+            try {
+                window.grecaptcha
+                    .ready(() => {
+                        window.grecaptcha
+                            .execute(key, { action: 'submit' })
+                            .then((token) => resolve(token));
+                    });
+            } catch (ex) {
+                console.error(ex);
+                reject(ex);
+            }
+        });
+    }
+
     // FETCH
     async fetchQuest(url, config) {
-        // if (!url) return;
         if (!url) throw new Error('No URL provided.');
-        if (!url.match('https://|http://')) url = this.apiURL ? this.apiURL + url : url;
+        if (!url.match(/^https?:\/\//)) url = this.apiURL ? this.apiURL + url : url;
 
-        if (!config.headers || (!config.headers['Content-Type'] && !config.postFile)) {
-            Object.assign(
-                config.headers || config,
-                config.headers ? { 'Content-Type': 'application/json' } : { headers: { 'Content-Type': 'application/json' } }
-            )
+        config.headers = config.headers || {};
+
+        if (!config.headers['Content-Type'] && !config.postFile) {
+            config.headers['Content-Type'] = 'application/json';
         }
 
         if (config.captcha && window.grecaptcha) {
-            const token = await window.grecaptcha.execute(process.env.SITE_KEY, { action: 'submit' });
-            this.replaceHeaderKey({ hamGuard: token });
+            try {
+                const token = await this.getCaptcha(config.captcha);
+                this.replaceHeaderKey({ [config.captcha]: token });
+            } catch (ex) {
+                console.error(ex);
+            }
         }
 
         this.headerKeys.forEach(e => Object.assign(config.headers, e));
@@ -73,85 +92,84 @@ export class KwestGiver {
         const errorType = {
             server: 'Server Error',
             loggedOut: 'Logged Out',
+            unauthorized: 'Unauthorized',
             message: 'Error'
         }
+        const errorMessage = {};
 
-        return new Promise((turnIn, abandonQuest) => {
-            fetch(url, config)
-                .then(async res => {
-                    if (!res.ok) {
-                        try {
-                            if (res.status === 401) {
-                                if (this.unauthorized && url.match(this.apiURL)) {
-                                    turnIn(this.unauthorized(url, config))
-                                } else {
-                                    const error = await res.json();
-                                    abandonQuest(error);
-                                }
-                            } else if (res.status === 403) {
-                                abandonQuest({ errorMessage: 'Unauthorized.' });
-                            } else {
-                                const error = await res.json();
-                                abandonQuest(error);
-                            }
-                        }
-                        catch (ex) {
-                            try {
-                                abandonQuest(await res.text());
-                            }
-                            catch (ex) {
-                                abandonQuest(res.status === 404 ? { errorMessage: '404 Not found...' } : ex);
-                            }
-                        }
-                    }
-                    if (!res.headers.get('content-length') || res.status === 204) {
-                        turnIn(true);
-                    }
-                    const contentType = res.headers.get('content-type');
-                    if (contentType?.match('application/json')) {
-                        return res.json();
-                    } else if (config.download) {
-                        const metaData = {}
+        try {
+            const res = await fetch(url, config);
 
-                        let disposition = res.headers.get('content-disposition');
-                        console.log(disposition)
-                        if (disposition) {
-                            disposition = disposition.split(';');
-                            disposition.forEach(e => {
-                                const data = e.trim().split('=');
-                                metaData[data[0]] = data.length === 1 ? true : metaData[data[0]] = data[1]
-                            })
-                        }
+            if (!res.ok) {
+                if (res.status === 401 && url.match(this.apiURL) && this.unauthorized) {
+                    return this.unauthorized(url, config);
+                }
 
-                        turnIn({
-                            file: await res.blob(),
-                            metaData
-                        });
+                const error = await res.json().catch(() => res.text());
+                errorMessage.error = error;
 
-                    } else {
-                        turnIn(res);
-                    }
-                })
-                .then(res => {
-                    if (res.success === true) {
-                        turnIn(res.resultData);
-                    } else if (res.success === false) {
-                        const errorMessage = {
-                            error: errorType.message,
-                            errorMessage: res.errorMessage || 'An Error has occurred...'
-                        };
-                        abandonQuest(errorMessage);
-                    } else {
-                        turnIn(res);
-                    }
-                })
-                .catch(ex => {
-                    abandonQuest(ex);
-                })
-        })
-            .catch((e) => {
-                throw e
-            })
+                if (res.status === 401) {
+                    errorMessage.errorMessage = errorType.loggedOut;
+                    throw errorMessage;
+                }
+
+                if (res.status === 403) {
+                    errorMessage.errorMessage = errorType.unauthorized;
+                    throw errorMessage;
+                }
+
+                throw error;
+            }
+
+            if (res.headers.get('content-length') === 0 || res.status === 204) {
+                return true;
+            }
+
+            if (config.download) {
+                const metaData = {};
+                let disposition = res.headers.get('content-disposition');
+                if (disposition) {
+                    disposition.split(';').forEach(e => {
+                        const [key, value] = e.trim().split('=');
+                        metaData[key] = value ? value : true;
+                    });
+                }
+
+                return {
+                    file: await res.blob(),
+                    metaData
+                };
+            }
+
+            const contentType = res.headers.get('content-type') ?? '';
+
+            if (contentType.includes('application/json')) {
+                const JSONRes = await res.json();
+
+                if (JSONRes.success === true) {
+                    return JSONRes.resultData;
+                }
+
+                if (JSONRes.success === false) {
+                    const errorMessage = {
+                        error: errorType.message,
+                        errorMessage: JSONRes.errorMessage || 'An Error has occurred...'
+                    };
+                    throw errorMessage;
+                }
+
+                return JSONRes;
+            }
+
+            return await res.text();
+
+        } catch (ex) {
+            const errorMessage = {
+                error: ex,
+                errorMessage: ex.errorMessage || 'An Error has occurred...'
+            };
+            throw errorMessage;
+        }
     }
 
     get(url, config = {}) {
@@ -159,7 +177,6 @@ export class KwestGiver {
     }
 
     getQuery(url, query, config = {}) {
-
         if (!Object.entries(query).length) {
             return this.get(url, config)
         }
@@ -226,11 +243,8 @@ export class KwestGiver {
         return this.QuestBoard(url, config, this.methods.delete);
     }
 
-
     setLifecycle(span) {
-        const now = new Date();
-        const lifespan = span ?? 0;
-        this.lifecycle = new Date(now.getTime() + (lifespan - 1) * 60000);
+        this.lifecycle = new Date(span) > new Date() ? new Date(span) : new Date(new Date().getTime() + (span - 1) * 60000);
         console.log('Token Lifecycle Set:', this.lifecycle);
     }
 
@@ -239,13 +253,15 @@ export class KwestGiver {
             config.body = JSON.stringify(config.body)
         }
 
-
         let useQueue = true;
         if (new Date() < this.lifecycle || this.useQueue === false) {
             useQueue = false;
         }
 
-        this.replaceHeaderKey({ '_Queue-Type': useQueue ? 'QUEUED' : 'SHOTGUNNED' });
+        if (this.showQueueType) {
+            this.replaceHeaderKey({ '_Queue-Type': useQueue ? 'QUEUED' : 'SHOTGUNNED' });
+        }
+
         return this.addRequest(url, config, method, useQueue);
     }
 
@@ -304,11 +320,11 @@ export class KwestGiver {
         const socket = new WebSocket(url);
 
         socket.onopen = function (e) {
-            // console.log(`%c[open]`, 'color:green', `Connection established`);
+            console.log(`%c[open]`, 'color:green', `Connection established`);
         };
 
         socket.onmessage = function (event) {
-            // console.log(`%c[message]`, 'color:blue', `Data received from server: ${event.data}`);
+            console.log(`%c[message]`, 'color:blue', `Data received from server: ${event.data}`);
             try {
                 const msg = JSON.parse(event.data);
                 if (msg.socketId) {
@@ -325,15 +341,15 @@ export class KwestGiver {
 
         socket.onclose = function (event) {
             if (event.wasClean) {
-                // console.log(`%c[close]`, 'color:red', `Connection closed cleanly, code=${event.code} reason=${event.reason}`);
-                // socket.closed();
+                console.log(`%c[close]`, 'color:red', `Connection closed cleanly, code=${event.code} reason=${event.reason}`);
+                socket.closed();
             } else {
-                // console.log(`%c[close]`, 'color:red', `Connection died`);
+                console.log(`%c[close]`, 'color:red', `Connection died`);
             }
         };
 
         socket.onerror = function (error) {
-            // console.log(`%c[ERROR]`, 'color:red', error);
+            console.log(`%c[ERROR]`, 'color:red', error);
             socket.error(error);
         };
 
@@ -375,7 +391,6 @@ export class KwestGiver {
         }
     }
 
-
     static fetchQuest(url, config) {
         const Quest = new KwestGiver()
         return Quest.fetchQuest(url, config);
@@ -405,3 +420,5 @@ export class KwestGiver {
         return Quest.delete(url, config);
     }
 }
+
+export default KwestGiver;
