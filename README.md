@@ -284,15 +284,15 @@ Logs the current header keys.
 showHeaderKeys()
 ```
 
-#### hasHeaderKeys
+#### hasHeaderKey
 
 Checks if a header key exists.
 
 ```javascript
-hasHeaderKeys(k)
+hasHeaderKey(key)
 ```
 
-- `k`: The key to check.
+- `key`: The key to check.
 
 #### clearHeaderKeys
 
@@ -302,35 +302,35 @@ Clears all header keys.
 clearHeaderKeys()
 ```
 
-#### addHeaderKeys
+#### addHeaderKeyValue
 
 Adds a header key.
 
 ```javascript
-addHeaderKeys(k)
+addHeaderKeyValue(keyValue)
 ```
 
-- `k`: The key to add.
+- `keyValue`: The key to add.
 
-#### replaceHeaderKey
+#### replaceHeaderKeyValue
 
 Replaces a header key.
 
 ```javascript
-replaceHeaderKey(k)
+replaceHeaderKeyValue(keyValue)
 ```
 
-- `k`: The key to replace.
+- `keyValue`: The key to replace.
 
 #### removeHeaderKey
 
 Removes a header key.
 
 ```javascript
-removeHeaderKey(k)
+removeHeaderKey(key)
 ```
 
-- `k`: The key to remove.
+- `key`: The key to remove.
 
 ## Static Methods
 
@@ -340,6 +340,7 @@ removeHeaderKey(k)
 fetchQuest(url, config)
 get(url, config = {})
 getQuery(url, query, config = {})
+queryString(query)
 post(url, body, config = {})
 put(url, body, config = {})
 patch(url, body, operation, config = {})
