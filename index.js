@@ -3,6 +3,7 @@ class KwestGiver {
         this.apiURL = url;
         this.headerKeys = [];
         this.unauthorized = null;
+        this.authorization = null;
 
         this.patchOp = {
             update: 'replace',
@@ -83,11 +84,11 @@ class KwestGiver {
 
         this.headerKeys.forEach(e => Object.assign(config.headers, e));
 
-        if (this.localKey && typeof localStorage !== 'undefined') {
+        if (this.localKey && this.authorization && typeof localStorage !== 'undefined') {
             try {
                 const keys = window.localStorage.getItem(this.localKey);
                 const parsedKeys = JSON.parse(keys);
-                Object.assign(config.headers, { authorization: 'Bearer ' + parsedKeys.access })
+                Object.assign(config.headers, this.authorization(parsedKeys))
             } catch {
                 console.warn('Keys Missing.')
             }
@@ -150,23 +151,14 @@ class KwestGiver {
             if (contentType.includes('application/json')) {
                 const JSONRes = await res.json();
 
-                if (JSONRes.success === true) {
-                    return JSONRes.resultData;
-                }
-
-                if (JSONRes.success === false) {
-                    const errorMessage = {
-                        error: errorType.message,
-                        errorMessage: JSONRes.errorMessage || 'An Error has occurred...'
-                    };
-                    throw errorMessage;
+                if (this.processJSONResponse) {
+                    return this.processJSONResponse(JSONRes)
                 }
 
                 return JSONRes;
             }
 
             return await res.text();
-
         } catch (ex) {
             const errorMessage = {
                 error: ex,
@@ -185,12 +177,16 @@ class KwestGiver {
             return this.get(url, config)
         }
 
-        url += '?' + Object
+        url += this.queryString(query);
+
+        return this.QuestBoard(url, config, this.methods.get);
+    }
+
+    queryString(query) {
+        return '?' + Object
             .entries(query)
             .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
             .join('&');
-
-        return this.QuestBoard(url, config, this.methods.get);
     }
 
     post(url, body, config = {}) {
@@ -221,23 +217,30 @@ class KwestGiver {
 
         if (body) {
             let patchBody = [];
-            Object
-                .entries(body)
-                .forEach(([key, value]) => {
-                    let objectProp = {
-                        op: operation
-                    }
-                    if (operation === this.patchOp.add || operation === this.patchOp.update || operation === this.patchOp.test) {
+
+            Object.entries(body).forEach(([key, value]) => {
+                let objectProp = { op: operation };
+                switch (operation) {
+                    case 'add':
+                    case 'update':
+                    case 'test':
                         objectProp.path = `/${key}`;
                         objectProp.value = value;
-                    } else if (operation === this.patchOp.remove) {
+                        break;
+                    case 'remove':
                         objectProp.path = `/${key}`;
-                    } else if (operation === this.patchOp.copy || operation === this.patchOp.move) {
+                        break;
+                    case 'copy':
+                    case 'move':
                         objectProp.from = `/${key}`;
                         objectProp.path = `/${value}`;
-                    }
-                    patchBody.push(objectProp);
-                })
+                        break;
+                    default:
+                        throw new Error(`Unsupported operation: ${operation}`);
+                }
+                patchBody.push(objectProp);
+            });
+
             config.body = patchBody;
         }
         return this.QuestBoard(url, config, this.methods.patch);
@@ -248,7 +251,9 @@ class KwestGiver {
     }
 
     setLifecycle(span) {
-        this.lifecycle = new Date(span) > new Date() ? new Date(span) : new Date(new Date().getTime() + (span - 1) * 60000);
+        const now = new Date();
+        const targetDate = new Date(span);
+        this.lifecycle = targetDate > now ? targetDate : new Date(now.getTime() + (span - 1) * 60000);
         console.log('Token Lifecycle Set:', this.lifecycle);
     }
 
@@ -257,10 +262,7 @@ class KwestGiver {
             config.body = JSON.stringify(config.body)
         }
 
-        let useQueue = true;
-        if (new Date() < this.lifecycle || this.useQueue === false) {
-            useQueue = false;
-        }
+        const useQueue = (new Date() < this.lifecycle || this.useQueue === false) ? false : true;
 
         if (this.showQueueType) {
             this.replaceHeaderKey({ '_Queue-Type': useQueue ? 'QUEUED' : 'SHOTGUNNED' });
@@ -307,16 +309,49 @@ class KwestGiver {
         this.queue = [];
     }
 
-    updateMethod(c, m) {
-        return Object.assign(c, { method: m });
+    updateMethod(config, method) {
+        return Object.assign(config, { method });
     }
 
+    /**
+     * Set a function to be called on a 401 Unauthorized error when hitting the saved API endpoint.
+     * This function is typically used to handle authentication refresh and retry failed requests.
+     * 
+     * @param {function} func - The function to call on a 401 error. It receives the request URL and config object.
+     * @returns {void}
+     */
     setUnauthorized(func) {
         this.unauthorized = func;
     }
 
     clearUnauthorized() {
         this.unauthorized = null;
+    }
+
+    /**
+     * Set a function to return a Name/Value object for authorization.
+     * @param {Function} func Function that returns the authorization value.
+     * @returns {void}
+     */
+    setAuthorization(func) {
+        this.authorization = func;
+    }
+
+    clearAuthorization() {
+        this.authorization = null;
+    }
+
+    /**
+     * Processes the JSON response in some way, possibly handling success or failure conditions.
+     * @param {Function} func Function that returns the processed the JSON response.
+     * @returns {void}
+     */
+    setProcessJSONResponse(func) {
+        this.processJSONResponse = func;
+    }
+
+    clearProcessJSONResponse() {
+        this.processJSONResponse = null;
     }
 
     // WEBSOCKET
@@ -365,30 +400,29 @@ class KwestGiver {
         console.log([...this.headerKeys]);
     }
 
-    hasHeaderKeys(k) {
-        return this.headerKeys.find(e => e.hasOwnProperty(k));
+    hasHeaderKey(key) {
+        return this.headerKeys.find(e => e.hasOwnProperty(key));
     }
 
     clearHeaderKeys() {
         this.headerKeys.length = 0;
     }
 
-    addHeaderKeys(k) {
-        this.headerKeys.push(k);
+    addHeaderKeyValue(keyValue) {
+        this.headerKeys.push(keyValue);
     }
 
-    replaceHeaderKey(k) {
-        const key = Object.keys(k)[0];
-        let authKey = this.headerKeys.find(e => e[key]);
-        if (authKey) {
-            authKey[key] = k[key];
+    replaceHeaderKeyValue(keyValue) {
+        const key = Object.keys(keyValue)[0];
+        let foundKey = this.headerKeys.find(e => e[key]);
+        if (foundKey) {
+            foundKey[key] = keyValue[key];
         } else {
-            this.addHeaderKeys(k);
+            this.addHeaderKeyValue(keyValue);
         }
     }
 
-    removeHeaderKey(k) {
-        const key = Object.keys(k)[0];
+    removeHeaderKey(key) {
         let authKey = this.headerKeys.findIndex(e => e[key]);
         if (authKey !== -1) {
             this.headerKeys.splice(authKey, 1);
@@ -406,6 +440,10 @@ class KwestGiver {
     static getQuery(url, query, config = {}) {
         const Quest = new KwestGiver();
         return Quest.getQuery(url, query, config);
+    }
+    static queryString(query) {
+        const Quest = new KwestGiver();
+        return Quest.queryString(query);
     }
     static post(url, body, config = {}) {
         const Quest = new KwestGiver();

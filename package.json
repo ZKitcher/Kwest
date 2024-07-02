@@ -1,6 +1,6 @@
 {
     "name": "kwest-giver",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "description": "Async HTTP client for JS environments.",
     "main": "index.js",
     "scripts": {
@@ -23,5 +23,5 @@
         "url": "https://github.com/ZKitcher/Kwest/issues"
     },
     "homepage": "https://github.com/ZKitcher/Kwest#readme",
-    "license": "ISC"
+    "license": "MIT"
 }

@@ -43,7 +43,7 @@ import KwestGiver from './KwestGiver';
 Initialize the `KwestGiver` class by providing an optional API URL:
 
 ```javascript
-const questGiver = new KwestGiver('https://api.example.com');
+const kwest = new KwestGiver('https://api.example.com');
 ```
 
 ## Methods
@@ -104,6 +104,12 @@ fetchQuest(url, config)
 
 - `url`: The request URL.
 - `config`: The request configuration object.
+
+#### config
+
+The request configuration object that can take custom headers for further features.
+
+- `captcha`: Add a reCAPTCHA site key to the config to add the reCAPTCHA token to the request.
 
 ### HTTP Methods
 
@@ -225,6 +231,51 @@ webSocket(url)
 
 ### Header Keys Management
 
+#### setUnauthorized
+
+Set a function to be called on a 401 Unauthorized error when hitting the saved API endpoint.
+This function is typically used to handle authentication refresh and retry failed requests.
+
+```javascript
+kwest.setUnauthorized((url, config) => {
+    return new Promise((resolve, reject) => {
+        updateAccessToken()
+            .then(() => (
+                kwest.fetchQuest(url, config)
+                    .then(res => resolve(res))
+                    .catch(ex => reject(ex))
+            ))
+    })
+})
+```
+
+#### setAuthorization
+
+Set a function to return a Name/Value object for authorization in use with localKeys.
+
+```javascript
+kwest.setAuthorization(keyFromStorage => ({ authorization: 'Bearer ' + keyFromStorage.accessToken }))
+```
+
+#### setProcessJSONResponse
+
+Processes the JSON response in some way, possibly handling success or failure conditions.
+
+```javascript
+kwest.setProcessJSONResponse(JSONResult => {
+    if (JSONResult.success === true) {
+        return JSONResult.resultData;
+    }
+
+    if (JSONResult.success === false) {
+        const errorMessage = {
+            errorMessage: JSONResult.errorMessage || 'An Error has occurred...'
+        };
+        throw errorMessage;
+    }
+})
+```
+
 #### showHeaderKeys
 
 Logs the current header keys.
@@ -308,9 +359,9 @@ Errors are handled and categorized as follows:
 ### Basic GET Request
 
 ```javascript
-const questGiver = new KwestGiver('https://api.example.com');
+const kwest = new KwestGiver('https://api.example.com');
 
-questGiver.get('/endpoint')
+kwest.get('/endpoint')
     .then(response => console.log(response))
     .catch(error => console.error(error));
 ```
@@ -318,11 +369,11 @@ questGiver.get('/endpoint')
 ### POST Request with JSON Body
 
 ```javascript
-const questGiver = new KwestGiver('https://api.example.com');
+const kwest = new KwestGiver('https://api.example.com');
 
 const body = { key: 'value' };
 
-questGiver.post('/endpoint', body)
+kwest.post('/endpoint', body)
     .then(response => console.log(response))
     .catch(error => console.error(error));
 ```
@@ -330,9 +381,9 @@ questGiver.post('/endpoint', body)
 ### WebSocket Connection
 
 ```javascript
-const questGiver = new KwestGiver();
+const kwest = new KwestGiver();
 
-const socket = questGiver.webSocket('wss://example.com/socket');
+const socket = kwest.webSocket('wss://example.com/socket');
 
 socket.onmessage = function(event) {
     console.log('Message from server ', event.data);
