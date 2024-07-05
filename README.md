@@ -46,6 +46,42 @@ Initialize the `KwestGiver` class by providing an optional API URL:
 const kwest = new KwestGiver('https://api.example.com');
 ```
 
+
+### Basic GET Request
+
+```javascript
+const kwest = new KwestGiver('https://api.example.com');
+
+kwest.get('/endpoint')
+    .then(response => console.log(response))
+    .catch(error => console.error(error));
+```
+
+### POST Request with JSON Body
+
+```javascript
+const kwest = new KwestGiver('https://api.example.com');
+
+const body = { key: 'value' };
+
+kwest.post('/endpoint', body)
+    .then(response => console.log(response))
+    .catch(error => console.error(error));
+```
+
+### WebSocket Connection
+
+```javascript
+const kwest = new KwestGiver();
+
+const socket = kwest.webSocket('wss://example.com/socket');
+
+socket.onmessage = function(message) {
+    // If message is in JSON (if parsable)
+    console.log('Message from server ', message);
+};
+```
+
 ## Methods
 
 ### Constructor
@@ -354,42 +390,6 @@ Errors are handled and categorized as follows:
 - `loggedOut`: Unauthorized errors.
 - `unauthorized`: Forbidden errors.
 - `message`: General errors.
-
-## Examples
-
-### Basic GET Request
-
-```javascript
-const kwest = new KwestGiver('https://api.example.com');
-
-kwest.get('/endpoint')
-    .then(response => console.log(response))
-    .catch(error => console.error(error));
-```
-
-### POST Request with JSON Body
-
-```javascript
-const kwest = new KwestGiver('https://api.example.com');
-
-const body = { key: 'value' };
-
-kwest.post('/endpoint', body)
-    .then(response => console.log(response))
-    .catch(error => console.error(error));
-```
-
-### WebSocket Connection
-
-```javascript
-const kwest = new KwestGiver();
-
-const socket = kwest.webSocket('wss://example.com/socket');
-
-socket.onmessage = function(event) {
-    console.log('Message from server ', event.data);
-};
-```
 
 ## License
 
