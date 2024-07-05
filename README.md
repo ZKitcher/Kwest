@@ -53,8 +53,7 @@ const kwest = new KwestGiver('https://api.example.com');
 ### Basic GET Request
 
 ```javascript
-const kwest = new KwestGiver('https://api.example.com');
-
+// https://api.example.com/endpoint
 kwest.get('/endpoint')
     .then(response => console.log(response))
     .catch(error => console.error(error));
@@ -63,10 +62,8 @@ kwest.get('/endpoint')
 ### POST Request with JSON Body
 
 ```javascript
-const kwest = new KwestGiver('https://api.example.com');
-
+// https://api.example.com/endpoint
 const body = { key: 'value' };
-
 kwest.post('/endpoint', body)
     .then(response => console.log(response))
     .catch(error => console.error(error));
@@ -80,7 +77,7 @@ const kwest = new KwestGiver();
 const socket = kwest.webSocket('wss://example.com/socket');
 
 socket.onmessage = function(message) {
-    // If message is in JSON (if parsable)
+    // message is in JSON (if parsable)
     console.log('Message from server ', message);
 };
 ```
