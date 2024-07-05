@@ -27,7 +27,6 @@
   - [Header Keys Management](#header-keys-management)
 - [Static Methods](#static-methods)
 - [Error Handling](#error-handling)
-- [Examples](#examples)
 - [License](#license)
 
 ## Installation
