@@ -32,6 +32,10 @@
 
 ## Installation
 
+```bash
+npm i kwest-giver
+```
+
 To use `KwestGiver` in your project, simply import it as follows:
 
 ```javascript
