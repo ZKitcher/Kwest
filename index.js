@@ -368,20 +368,25 @@ class KwestGiver {
                 const msg = JSON.parse(event.data);
                 if (msg.socketId) {
                     socket.id = msg.socketId;
-                    socket.ready();
+                    if (socket.ready)
+                        socket.ready(msg);
                 } else {
-                    socket.messaged(msg)
+                    if (socket.messaged)
+                        socket.messaged(msg)
                 }
             }
-            catch {
-                socket.messaged(event.data)
+            catch (ex) {
+                console.error('WS Error:', ex)
+                if (socket.messaged)
+                    socket.messaged(event.data)
             }
         };
 
         socket.onclose = function (event) {
             if (event.wasClean) {
                 console.log(`%c[close]`, 'color:red', `Connection closed cleanly, code=${event.code} reason=${event.reason}`);
-                socket.closed();
+                if (socket.closed)
+                    socket.closed(event)
             } else {
                 console.log(`%c[close]`, 'color:red', `Connection died`);
             }
