@@ -76,7 +76,7 @@ class KwestGiver {
         if (config.captcha && window.grecaptcha) {
             try {
                 const token = await this.getCaptcha(config.captcha);
-                this.replaceHeaderKey({ [config.captcha]: token });
+                this.replaceHeaderKeyValue({ [config.captcha]: token });
             } catch (ex) {
                 console.error(ex);
             }
@@ -265,7 +265,7 @@ class KwestGiver {
         const useQueue = (new Date() < this.lifecycle || this.useQueue === false) ? false : true;
 
         if (this.showQueueType) {
-            this.replaceHeaderKey({ '_Queue-Type': useQueue ? 'QUEUED' : 'SHOTGUNNED' });
+            this.replaceHeaderKeyValue({ '_Queue-Type': useQueue ? 'QUEUED' : 'SHOTGUNNED' });
         }
 
         return this.addRequest(url, config, method, useQueue);
