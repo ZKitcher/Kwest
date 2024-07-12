@@ -166,11 +166,7 @@ class KwestGiver {
 
             return await res.text();
         } catch (ex) {
-            const errorMessage = {
-                error: ex,
-                errorMessage: ex.errorMessage || 'An Error has occurred...'
-            };
-            throw errorMessage;
+            throw ex;
         }
     }
 
