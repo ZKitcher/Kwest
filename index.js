@@ -200,7 +200,7 @@ class KwestGiver {
             .split('&')
             .reduce((a, b) => {
                 const [name, value] = b.split('=');
-                a[name] = value;
+                a[name] = decodeURIComponent(value);
                 return a
             }, {})
     }
