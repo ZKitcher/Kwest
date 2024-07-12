@@ -96,7 +96,7 @@ class KwestGiver {
 
         const errorType = {
             server: 'Server Error',
-            loggedOut: 'Logged Out',
+            forbidden: 'Forbidden',
             unauthorized: 'Unauthorized',
             message: 'Error'
         }
@@ -106,27 +106,33 @@ class KwestGiver {
             const res = await fetch(url, config);
 
             if (!res.ok) {
-                if (res.status === 401 && url.match(this.apiURL) && this.unauthorized) {
-                    return this.unauthorized(url, config);
-                }
-
-                const error = await res.json().catch(() => res.text());
+                const contentType = res.headers.get('content-type') ?? '';
+                const error = await (contentType.includes('application/json') ? res.json() : res.text());
                 errorMessage.error = error;
+                errorMessage.status = res.status;
 
-                if (res.status === 401) {
-                    errorMessage.errorMessage = errorType.loggedOut;
-                    throw errorMessage;
+                switch (res.status) {
+                    case 401:
+                        if (url.match(this.apiURL) && this.unauthorized) {
+                            return this.unauthorized(url, config);
+                        }
+                        errorMessage.errorMessage = errorType.unauthorized;
+                        throw errorMessage;
+
+                    case 403:
+                        errorMessage.errorMessage = errorType.forbidden;
+                        throw errorMessage;
+
+                    case 500:
+                        errorMessage.errorMessage = errorType.server;
+                        throw errorMessage;
+
+                    default:
+                        throw error;
                 }
-
-                if (res.status === 403) {
-                    errorMessage.errorMessage = errorType.unauthorized;
-                    throw errorMessage;
-                }
-
-                throw error;
             }
 
-            if (res.headers.get('content-length') === 0 || res.status === 204) {
+            if (res.status === 204 || res.headers.get('content-length') === 0) {
                 return true;
             }
 
@@ -187,6 +193,16 @@ class KwestGiver {
             .entries(query)
             .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
             .join('&');
+    }
+
+    decodeQueryString(query) {
+        return query
+            .split('&')
+            .reduce((a, b) => {
+                const [name, value] = b.split('=');
+                a[name] = value;
+                return a
+            }, {})
     }
 
     post(url, body, config = {}) {
@@ -447,6 +463,10 @@ class KwestGiver {
         return Quest.getQuery(url, query, config);
     }
     static queryString(query) {
+        const Quest = new KwestGiver();
+        return Quest.queryString(query);
+    }
+    static decodeQueryString(query) {
         const Quest = new KwestGiver();
         return Quest.queryString(query);
     }

@@ -233,6 +233,22 @@ delete(url, config = {})
 - `url`: The request URL.
 - `config`: The request configuration object.
 
+### queryString
+
+Converts JSON to a query string.
+
+```javascript
+queryString(JSON)
+```
+
+### decodeQueryString
+
+Parses a query string to a JSON object.
+
+```javascript
+decodeQueryString(queryString)
+```
+
 ### setLifecycle
 
 Sets the token lifecycle.
