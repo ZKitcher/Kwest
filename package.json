@@ -1,12 +1,12 @@
 {
     "name": "kwest-giver",
-    "version": "1.1.0",
+    "version": "1.1.0a",
     "description": "Async HTTP client for JS environments.",
     "main": "index.js",
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1"
     },
-    "author": "ZKithcer",
+    "author": "ZKitcher",
     "repository": {
         "type": "git",
         "url": "git+https://github.com/ZKitcher/Kwest.git"
