@@ -62,6 +62,16 @@ class KwestGiver {
         });
     }
 
+    use(middleware) {
+        this.middlewares.push(middleware);
+    }
+
+    async executeMiddlewares(config) {
+        for (const middleware of this.middlewares) {
+            await middleware(config);
+        }
+    }
+
     // FETCH
     async fetchQuest(url, config) {
         if (!url) throw new Error('No URL provided.');
@@ -93,6 +103,8 @@ class KwestGiver {
                 console.warn('Keys Missing.')
             }
         }
+
+        await this.executeMiddlewares(config);
 
         const errorType = {
             server: 'Server Error',
