@@ -22,6 +22,8 @@ class KwestGiver {
             delete: 'DELETE'
         };
 
+        this.middlewares = [];
+
         this.useQueue = true;
         this.queue = [];
         this.isProcessing = false;
