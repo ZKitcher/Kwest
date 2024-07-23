@@ -110,6 +110,16 @@ addApiUrl(url)
 
 - `url`: The base URL for the API.
 
+### use
+
+To add middleware, use the use method. The middleware function will receive the HTTP header config object, which you can modify as needed.
+
+```javascript
+use(middleware)
+```
+
+- `middleware`: A function that takes the HTTP header config object as its argument.
+
 ### addLocalKey
 
 Adds a local storage key for authorization.
