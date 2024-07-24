@@ -22,15 +22,7 @@ class KwestGiver {
             delete: 'DELETE'
         };
 
-        this.middleware = {
-            PRE: 'pre',
-            POST: 'post',
-            ERROR: 'error',
-        };
-
         this.middlewares = [];
-        this.postWares = [];
-        this.errorWares = [];
 
         this.useQueue = true;
         this.queue = [];
@@ -52,25 +44,12 @@ class KwestGiver {
         this.localKey = key;
     }
 
-    use(middleware, type = this.middleware.PRE) {
-        const { PRE, POST, ERROR } = this.middleware
-        switch (type) {
-            case PRE:
-                this.middlewares.push(middleware);
-                return;
-            case POST:
-                this.postWares.push(middleware);
-                return;
-            case ERROR:
-                this.errorWares.push(middleware);
-                return;
-            default:
-                this.middlewares.push(middleware);
-        }
+    use(middleware) {
+        this.middlewares.push(middleware);
     }
 
-    async executeMiddlewares(argument, middleType = this.middlewares) {
-        for (const middleware of middleType) {
+    async executeMiddlewares(argument) {
+        for (const middleware of this.middlewares) {
             await middleware(argument);
         }
     }
@@ -106,8 +85,6 @@ class KwestGiver {
                 const error = await (contentType.includes('application/json') ? res.json() : res.text());
                 errorMessage.error = error;
                 errorMessage.status = res.status;
-
-                await this.executeMiddlewares(errorMessage, this.errorWares);
 
                 switch (res.status) {
                     case 401:
@@ -154,10 +131,7 @@ class KwestGiver {
 
             if (contentType.includes('application/json')) {
                 const JSONRes = await res.json();
-
-                await this.executeMiddlewares(JSONRes, this.postWares);
-
-                return JSONRes;
+                return this.processJSONResponse ? this.processJSONResponse(JSONRes) : JSONRes;
             }
 
             return await res.text();
@@ -478,11 +452,6 @@ class KwestGiver {
         const Quest = new KwestGiver();
         return Quest.delete(url, config);
     }
-    static middleType = {
-        PRE: 'pre',
-        POST: 'post',
-        ERROR: 'error',
-    };
 }
 
 module.exports = KwestGiver;

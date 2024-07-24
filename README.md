@@ -96,11 +96,10 @@ constructor(url)
 To add middleware, use the use method. The middleware function will receive the HTTP header config object, which you can modify as needed.
 
 ```javascript
-use(middleware, type = 'pre')
+use(middleware)
 ```
 
 - `middleware`: A function that takes the HTTP header config object as its argument.
-- `type`: An optional argument telling Kwest where to execute your middleware, pre/post/error.
 
 
 ```javascript
@@ -112,19 +111,6 @@ kwest.use(config => {
         console.warn('Keys Missing.')
     }
 })
-
-kwest.use(result => {
-    if (result.success === true) {
-        return result.resultData;
-    }
-
-    if (result.success === false) {
-        const errorMessage = {
-            errorMessage: result.errorMessage || 'An Error has occurred...'
-        };
-        throw errorMessage;
-    }
-}, 'post')
 ```
 
 ### toggleQueue
