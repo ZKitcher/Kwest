@@ -1,6 +1,6 @@
 # KwestGiver
 
-`KwestGiver` is a JavaScript class designed to simplify and streamline API requests and WebSocket connections. It offers support for various HTTP methods, queueing of requests, and integration with Google reCAPTCHA.
+`KwestGiver` is a JavaScript class designed to simplify and streamline API requests and WebSocket connections. It offers support for various HTTP methods, queueing of requests, and middleware capabilities.
 
 ## Table of Contents
 
@@ -8,10 +8,9 @@
 - [Usage](#usage)
 - [Methods](#methods)
   - [Constructor](#constructor)
+  - [use](#use)
   - [toggleQueue](#togglequeue)
   - [addApiUrl](#addapiurl)
-  - [addLocalKey](#addlocalkey)
-  - [getCaptcha](#getcaptcha)
   - [fetchQuest](#fetchquest)
   - [HTTP Methods](#http-methods)
     - [get](#get)
@@ -92,6 +91,42 @@ constructor(url)
 
 - `url` (optional): The base URL for the API.
 
+### use
+
+To add middleware, use the use method. The middleware function will receive the HTTP header config object, which you can modify as needed.
+
+```javascript
+use(middleware, type = 'pre')
+```
+
+- `middleware`: A function that takes the HTTP header config object as its argument.
+- `type`: An optional argument telling Kwest where to execute your middleware, pre/post/error.
+
+
+```javascript
+kwest.use(config => {
+    try {
+        const keys = getLocal('HSQuestKeys');
+        Object.assign(config.headers, { authorization: 'Bearer ' + keys.access })
+    } catch {
+        console.warn('Keys Missing.')
+    }
+})
+
+kwest.use(result => {
+    if (result.success === true) {
+        return result.resultData;
+    }
+
+    if (result.success === false) {
+        const errorMessage = {
+            errorMessage: result.errorMessage || 'An Error has occurred...'
+        };
+        throw errorMessage;
+    }
+}, 'post')
+```
+
 ### toggleQueue
 
 Toggles the use of the request queue.
@@ -109,36 +144,6 @@ addApiUrl(url)
 ```
 
 - `url`: The base URL for the API.
-
-### use
-
-To add middleware, use the use method. The middleware function will receive the HTTP header config object, which you can modify as needed.
-
-```javascript
-use(middleware)
-```
-
-- `middleware`: A function that takes the HTTP header config object as its argument.
-
-### addLocalKey
-
-Adds a local storage key for authorization.
-
-```javascript
-addLocalKey(key)
-```
-
-- `key`: The key used to retrieve authorization tokens from local storage.
-
-### getCaptcha
-
-Gets a reCAPTCHA token.
-
-```javascript
-getCaptcha(key)
-```
-
-- `key`: The reCAPTCHA site key.
 
 ### fetchQuest
 

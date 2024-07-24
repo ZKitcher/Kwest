@@ -22,7 +22,15 @@ class KwestGiver {
             delete: 'DELETE'
         };
 
+        this.middleware = {
+            PRE: 'pre',
+            POST: 'post',
+            ERROR: 'error',
+        };
+
         this.middlewares = [];
+        this.postWares = [];
+        this.errorWares = [];
 
         this.useQueue = true;
         this.queue = [];
@@ -44,33 +52,26 @@ class KwestGiver {
         this.localKey = key;
     }
 
-    getCaptcha(key) {
-        return new Promise((resolve, reject) => {
-            if (typeof window !== 'undefined' && window.grecaptcha) {
-                try {
-                    window.grecaptcha
-                        .ready(() => {
-                            window.grecaptcha
-                                .execute(key, { action: 'submit' })
-                                .then((token) => resolve(token));
-                        });
-                } catch (ex) {
-                    console.error(ex);
-                    reject(ex);
-                }
-            } else {
-                reject(new Error('CAPTCHA is not available in Node.js environment.'));
-            }
-        });
+    use(middleware, type = this.middleware.PRE) {
+        const { PRE, POST, ERROR } = this.middleware
+        switch (type) {
+            case PRE:
+                this.middlewares.push(middleware);
+                return;
+            case POST:
+                this.postWares.push(middleware);
+                return;
+            case ERROR:
+                this.errorWares.push(middleware);
+                return;
+            default:
+                this.middlewares.push(middleware);
+        }
     }
 
-    use(middleware) {
-        this.middlewares.push(middleware);
-    }
-
-    async executeMiddlewares(config) {
-        for (const middleware of this.middlewares) {
-            await middleware(config);
+    async executeMiddlewares(argument, middleType = this.middlewares) {
+        for (const middleware of middleType) {
+            await middleware(argument);
         }
     }
 
@@ -85,26 +86,7 @@ class KwestGiver {
             config.headers['Content-Type'] = 'application/json';
         }
 
-        if (config.captcha && window.grecaptcha) {
-            try {
-                const token = await this.getCaptcha(config.captcha);
-                this.replaceHeaderKeyValue({ [config.captcha]: token });
-            } catch (ex) {
-                console.error(ex);
-            }
-        }
-
         this.headerKeys.forEach(e => Object.assign(config.headers, e));
-
-        if (this.localKey && this.authorization && typeof localStorage !== 'undefined') {
-            try {
-                const keys = window.localStorage.getItem(this.localKey);
-                const parsedKeys = JSON.parse(keys);
-                Object.assign(config.headers, this.authorization(parsedKeys))
-            } catch {
-                console.warn('Keys Missing.')
-            }
-        }
 
         await this.executeMiddlewares(config);
 
@@ -124,6 +106,8 @@ class KwestGiver {
                 const error = await (contentType.includes('application/json') ? res.json() : res.text());
                 errorMessage.error = error;
                 errorMessage.status = res.status;
+
+                await this.executeMiddlewares(errorMessage, this.errorWares);
 
                 switch (res.status) {
                     case 401:
@@ -171,9 +155,7 @@ class KwestGiver {
             if (contentType.includes('application/json')) {
                 const JSONRes = await res.json();
 
-                if (this.processJSONResponse) {
-                    return this.processJSONResponse(JSONRes)
-                }
+                await this.executeMiddlewares(JSONRes, this.postWares);
 
                 return JSONRes;
             }
@@ -496,6 +478,11 @@ class KwestGiver {
         const Quest = new KwestGiver();
         return Quest.delete(url, config);
     }
+    static middleType = {
+        PRE: 'pre',
+        POST: 'post',
+        ERROR: 'error',
+    };
 }
 
 module.exports = KwestGiver;
