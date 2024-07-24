@@ -131,7 +131,10 @@ class KwestGiver {
 
             if (contentType.includes('application/json')) {
                 const JSONRes = await res.json();
-                return this.processJSONResponse ? this.processJSONResponse(JSONRes) : JSONRes;
+                if (this.processJSONResponse) {
+                    return await this.processJSONResponse(JSONRes);
+                }
+                return JSONRes;
             }
 
             return await res.text();
