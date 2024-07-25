@@ -73,6 +73,7 @@ class KwestGiver {
             server: 'Server Error',
             forbidden: 'Forbidden',
             unauthorized: 'Unauthorized',
+            notFound: 'Not Found',
             message: 'Error'
         }
         const errorMessage = {};
@@ -96,6 +97,10 @@ class KwestGiver {
 
                     case 403:
                         errorMessage.errorMessage = errorType.forbidden;
+                        throw errorMessage;
+
+                    case 404:
+                        errorMessage.errorMessage = errorType.notFound;
                         throw errorMessage;
 
                     case 500:
