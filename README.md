@@ -93,13 +93,14 @@ constructor(url)
 
 ### use
 
-To add middleware, use the use method. The middleware function will receive the HTTP header config object, which you can modify as needed.
+To add middleware, use the use method. The middleware function will receive the HTTP header config object or http result, which you can modify as needed.
 
 ```javascript
-use(middleware)
+use(middleware, type = 'pre')
 ```
 
 - `middleware`: A function that takes the HTTP header config object as its argument.
+- `type`: Where the middleware gets executed. (pre/post) the http request.
 
 
 ```javascript
@@ -111,6 +112,19 @@ kwest.use(config => {
         console.warn('Keys Missing.')
     }
 })
+
+kwest.use(config => {
+    if (res.success === true) {
+        return res.resultData;
+    }
+
+    if (res.success === false) {
+        const errorMessage = {
+            errorMessage: res.errorMessage || 'An Error has occurred...'
+        };
+        throw errorMessage;
+    }
+}, 'post')
 ```
 
 ### toggleQueue
@@ -308,25 +322,6 @@ Set a function to return a Name/Value object for authorization in use with local
 
 ```javascript
 kwest.setAuthorization(keyFromStorage => ({ authorization: 'Bearer ' + keyFromStorage.accessToken }))
-```
-
-#### setProcessJSONResponse
-
-Processes the JSON response in some way, possibly handling success or failure conditions.
-
-```javascript
-kwest.setProcessJSONResponse(JSONResult => {
-    if (JSONResult.success === true) {
-        return JSONResult.resultData;
-    }
-
-    if (JSONResult.success === false) {
-        const errorMessage = {
-            errorMessage: JSONResult.errorMessage || 'An Error has occurred...'
-        };
-        throw errorMessage;
-    }
-})
 ```
 
 #### showHeaderKeys

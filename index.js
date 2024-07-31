@@ -23,6 +23,7 @@ class KwestGiver {
         };
 
         this.middlewares = [];
+        this.postMiddlewares = [];
 
         this.useQueue = true;
         this.queue = [];
@@ -44,14 +45,30 @@ class KwestGiver {
         this.localKey = key;
     }
 
-    use(middleware) {
-        this.middlewares.push(middleware);
+    use(middleware, type = 'pre') {
+        switch (type) {
+            case 'pre':
+                this.middlewares.push(middleware);
+                break;
+            case 'post':
+                this.postMiddlewares.push(middleware);
+                break;
+            default:
+                this.middlewares.push(middleware);
+        }
     }
 
     async executeMiddlewares(argument) {
         for (const middleware of this.middlewares) {
             await middleware(argument);
         }
+    }
+
+    async executePostMiddlewares(res) {
+        for (const middleware of this.postMiddlewares) {
+            res = await middleware(res);
+        }
+        return res;
     }
 
     // FETCH
@@ -136,10 +153,7 @@ class KwestGiver {
 
             if (contentType.includes('application/json')) {
                 const JSONRes = await res.json();
-                if (this.processJSONResponse) {
-                    return await this.processJSONResponse(JSONRes);
-                }
-                return JSONRes;
+                return await this.executePostMiddlewares(JSONRes);
             }
 
             return await res.text();
