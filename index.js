@@ -109,19 +109,19 @@ class KwestGiver {
                         if (url.match(this.apiURL) && this.unauthorized) {
                             return this.unauthorized(url, config);
                         }
-                        errorMessage.errorMessage = errorType.unauthorized;
+                        errorMessage.title = errorType.unauthorized;
                         throw errorMessage;
 
                     case 403:
-                        errorMessage.errorMessage = errorType.forbidden;
+                        errorMessage.title = errorType.forbidden;
                         throw errorMessage;
 
                     case 404:
-                        errorMessage.errorMessage = errorType.notFound;
+                        errorMessage.title = errorType.notFound;
                         throw errorMessage;
 
                     case 500:
-                        errorMessage.errorMessage = errorType.server;
+                        errorMessage.title = errorType.server;
                         throw errorMessage;
 
                     default:
